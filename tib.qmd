@@ -1,0 +1,60 @@
+---
+title: "intro econometrics"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup
+library(tidyverse)
+library(wooldridge)
+library(flextable)
+```
+
+```{r}
+# CODE
+# Setting the seed
+set.seed(3)
+ideal_tib <- tibble(
+  # Generating a sequence of 
+  # integers from 1 to 10
+  i = 1:10,
+  # Generating 10 random numbers between 
+  # 4 and 10, rounding to 2 decimal places
+  y1i = round(
+    x = runif(n = 10, min = 4, max = 10),
+    digits = 2
+    ),
+  # 10 random numbers
+  y0i = round(
+    x = runif(n = 10, min = 0, max = 5),
+    digits = 2
+    ),
+  diff = y1i - y0i
+  ) 
+```
+
+```{r}
+ideal_tib %>%
+  flextable() |> autofit() |> 
+  theme_booktabs() |> fontsize(size = 12) |> 
+  line_spacing(space = 0.3)
+```
+
+```{r}
+mean(ideal_tib$diff)
+```
+
+Gjort vha. pipe
+
+```{r}
+ideal_tib |> 
+  summarise(
+    round(
+      x = mean(diff), 
+      digits = 3
+      )
+  ) |> 
+  pull()
+```
+
