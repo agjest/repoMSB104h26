@@ -1,0 +1,323 @@
+---
+title: "Simple regression"
+format: html
+---
+
+```{r}
+#| label: setup
+library(tidyverse)
+library(wooldridge)
+```
+
+## Simple regression
+
+```{r}
+campus <- get(data(campus)) |> 
+  mutate(
+    police = round((police/enroll) * 1000, 2),
+    crime = round((crime/enroll) * 1000, 2)
+  )
+```
+
+```{r}
+{
+  set.seed(123)
+  campus_10 <- campus[sample(1:97, 10),]
+  campus_10 <- select(campus_10, police, crime)
+  t(campus_10)
+}
+```
+
+```{r}
+summary(lm(formula = 'crime ~ police', data = campus_10))
+```
+
+```{r}
+campus_10 %>% 
+  lm(
+    formula = 'crime ~ police',
+    data = .
+  ) |> 
+  summary()
+```
+
+## Samme regresjon «for hånd»
+
+```{r}
+beta_2 <- campus_10 |> 
+  mutate(
+    x = police, 
+    y = crime, 
+    xy = x * y
+  ) |> 
+  summarise(
+    beta_2 = (sum(xy) - 10 * mean(y) * mean(x))/(sum(x^2) - 10 * mean(x)^2)
+  ) |> 
+  pull()
+
+beta_2
+```
+
+```{r}
+# beta_1 = \bar{y} - beta_2 * \bar{x}
+beta_1 <- campus_10 |> 
+  mutate(
+    x = police, 
+    y = crime
+  ) |> 
+  summarise(beta_1 = mean(y) - beta_2 * mean(x)) |> 
+  pull()
+
+beta_1
+```
+
+```{r}
+lm_police <-campus %>% 
+  lm(
+    'crime ~police',
+    data = .
+  )
+```
+
+```{r}
+fitted_data <- tibble(
+police = campus$police,
+crime_mod = fitted(lm_police)
+)
+
+fitted_data  |> 
+ggplot() + 
+geom_point(
+  mapping = aes(x = police, y = crime_mod), 
+  size = 2
+  ) +
+geom_point(
+  data = campus, 
+  mapping = aes(x = police, y = crime), 
+  colour = 'blue', 
+  alpha = 0.4
+  ) +
+geom_abline(
+  intercept = coefficients(lm_police)[1],
+  slope = coefficients(lm_police)[2]
+  ) +
+labs(title = "Scatterplot of campus data with fitted values and regression line.") +
+  theme(
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18)
+    )
+```
+
+```{r}
+ggplot(data = campus) + 
+geom_point(
+  mapping = aes(
+    x = police, 
+    y = pluck(lm('campus$crime ~ campus$police'), "fitted.values")
+    ), 
+  size = 2
+  ) +
+geom_point(
+  data = campus, 
+  mapping = aes(x = police, y = crime), 
+  colour = 'blue', 
+  alpha = 0.4
+  ) +
+geom_abline(
+  intercept = coefficients(lm('campus$crime ~ campus$police'))[1],
+  slope = coefficients(lm('campus$crime ~ campus$police'))[2]
+  ) +
+labs(
+  title = "Scatterplot of campus data with fitted values and regression line."
+  ) +
+ylab("crime") +
+xlab("police") +
+  theme(
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18)
+    )
+```
+
+```{r}
+#Gen Data 
+df_earn <- tibble(
+x = sample(8:20, 100, replace = TRUE),
+y = -14 + 2.5*x + rnorm(100, 0, 5)) %>% 
+filter(y > 5)
+
+#Estimates 
+lm_earn <- lm(y ~ x, data = df_earn)
+#Save coefficients
+b0_earn <- lm_earn$coefficients[1]
+b1_earn <- lm_earn$coefficients[2]
+
+# 1/(N-1)*sum(u_i * (X_i - mean(X)))
+df_earn |> 
+  summarise(1/(length(x) - 1) * (sum(residuals(lm_earn) * (x - mean(x)))) ) |> 
+  pull()
+```
+
+```{r}
+{set.seed(2222)
+df1 <- tibble(
+  x = rnorm(1000, 5, 5),
+  y = 100 - 1*x + 
+    rnorm(1000, 0, 10)
+  ) 
+}
+```
+
+```{r}
+# same seed, higher (double) sd
+set.seed(2222)
+{df2 <- tibble(
+  x = rnorm(1000, 5, 5),
+  y = 100 - 1*x + 
+    rnorm(1000, 0, 20)
+  )
+}
+```
+
+```{r}
+cor(df1$x, df1$y)
+```
+
+```{r}
+round(cor(df1$x, df1$y)^2, digits = 2)
+```
+
+```{r}
+cor(df2$x, df2$y)
+```
+
+```{r}
+round(cor(df2$x, df2$y)^2, digits = 2)
+```
+
+```{r}
+g021 <- df1 |> 
+  ggplot() +
+  xlim(-15,25) + 
+  ylim(0, 160) +
+  geom_point(
+    aes(x, y), color = "blue", alpha = 0.5, 
+    size = 2
+  ) +
+  stat_smooth(
+    formula = 'y ~ x', data = df1, aes(x, y), 
+    method = "lm", se = FALSE, color = "red", 
+    linewidth = 2
+    ) +
+  labs(title = 
+    as.expression(bquote(~ R^2 == ~ 
+  .(round(summary(lm(y~x, df1))$r.squared, 2))))
+  ) +
+  theme(
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18)
+    )
+```
+
+```{r}
+g007 <- df2 |> 
+ggplot(mapping = aes(x = x, y = y)) +
+ xlim(-15,25) + 
+ ylim(0, 160) +
+ geom_point(color = "blue", alpha = 0.5, 
+  size = 2) +
+ stat_smooth(formula = 'y ~ x', method = "lm", 
+  se = FALSE, color = "red", linewidth = 2) +
+ labs(title = as.expression(
+  bquote(~ R^2 == ~ 
+ .(round(summary(lm(y~x, df2))$r.squared, 2)))
+  )
+) +
+  theme(
+    axis.text = element_text(size = 16),
+    axis.title = element_text(size = 18)
+    )
+```
+
+```{r}
+g021
+```
+
+```{r}
+g007
+```
+
+```{r}
+lm_cars <- lm(
+  formula = 'dist ~ speed', 
+  data = cars)
+```
+
+```{r}
+# Y hat bar, fitted values
+mean(fitted(lm_cars))
+```
+
+```{r}
+# mean y
+mean(cars$dist)
+```
+
+### Total variation
+
+```{r}
+sum((cars$dist - mean(cars$dist))^2)
+```
+
+
+### Explained variation
+
+```{r}
+# ESS, explained variation
+sum((fitted(lm_cars) - mean(cars$dist))^2)
+```
+
+### unexplained variation
+
+```{r}
+# RSS, unexplained variation
+# four ways to do it
+sum(residuals(lm_cars)^2)
+sum(pluck(lm_cars, "residuals")^2)
+sum(lm_cars$residuals^2)
+sum((cars$dist -pluck(lm_cars, "fitted.values"))^2)
+```
+
+```{r}
+cor(cars$dist, lm_cars$fitted.values)
+```
+
+```{r}
+cor(cars$dist, lm_cars$fitted.values)^2
+```
+
+```{r}
+lm_cars |> 
+  summary()
+```
+
+```{r}
+summary_lm_cars <- summary(lm_cars)
+```
+
+
+```{r}
+pluck(summary(lm_cars), "r.squared")
+```
+
+```{r}
+cor(cars$dist, lm_cars$fitted.values)^2
+```
+
+```{r}
+summary_lm_cars$r.squared == cor(cars$dist, lm_cars$fitted.values)^2
+```
+
+```{r}
+near(summary_lm_cars$r.squared, cor(cars$dist, lm_cars$fitted.values)^2)
+```
+
