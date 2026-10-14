@@ -1,0 +1,225 @@
+---
+title: "multiple regression"
+format: html
+editor: source
+---
+
+```{r}
+#| label: setup
+#| message: false
+library(tidyverse)
+library(flextable)
+```
+
+
+## Multiple regression
+
+```{r}
+# Data for constructed example
+df <- data.frame(W = rep(c(FALSE, TRUE), each = 100))  |> 
+  mutate(
+    X = .5 + 2 * W + rnorm(200),
+    Y = -.5 * X + 4 * W + 1 + rnorm(200)
+    )
+  
+df2 <- df |> 
+  group_by(W) |> 
+  mutate(
+    mean_X = mean(X), 
+    mean_Y = mean(Y)
+    )  |> 
+  ungroup()
+```
+
+```{r}
+df2 |> 
+  ggplot(
+    mapping = aes(y = Y, x = X)
+    ) +
+  geom_point(size = 3) +
+  geom_smooth(
+    formula = 'y ~ x',
+    method = lm, 
+    se = FALSE, 
+    color = "blue"
+    )
+```
+
+```{r}
+df2 |> 
+  mutate(W = fct(as.character(W))) |> 
+  ggplot(
+    mapping = aes(y = Y, x = X, color = W)
+    ) +
+  geom_point(size = 3) +
+  geom_smooth(
+    formula = 'y ~ x',
+    method = lm, 
+    se = FALSE, 
+    color = "blue"
+    )
+```
+
+```{r}
+df2 |> 
+  mutate(
+    W = fct(as.character(W))
+    ) |> 
+  ggplot(
+    mapping = aes(
+      y = Y, 
+      x = X, 
+      color = W
+      )
+    ) +
+  geom_point(size = 3) +
+  geom_smooth(
+    formula = 'y ~ x',
+    method = lm, 
+    se = FALSE, 
+    color = "blue"
+    ) +
+  facet_wrap(
+    '~ W'
+  )
+```
+
+```{r}
+mtcars_inter <- mtcars |> 
+  select(mpg, wt, cyl) |> 
+  mutate(
+    dum_6cyl = ifelse(cyl == 6, 1, 0),
+    dum_8cyl = ifelse(cyl == 8, 1, 0),
+    wt_6cyl = wt * dum_6cyl,
+    wt_8cyl = wt * dum_8cyl
+  )
+```
+
+
+```{r}
+lm_inter <- lm(
+  formula = as.formula(
+    paste("mpg",
+          paste("wt", "dum_6cyl",
+                "dum_8cyl", "wt_6cyl", 
+                "wt_8cyl",
+                sep = " + "
+                ),
+          sep = " ~ "
+          )
+    ),
+  data = mtcars_inter
+  )
+
+summary(lm_inter)
+```
+
+```{r}
+lm_inter_rp <- lm('mpg ~ wt + cyl * wt', 
+    data = mutate(.data = mtcars, 
+                  cyl = fct(as.character(cyl))))
+```
+
+```{r}
+
+lm_inter_rp  |> car::residualPlots(
+  plot = FALSE, 
+  tests = FALSE) |> 
+  as_tibble(rownames = "Term") |> 
+  flextable() |> autofit() |>
+  line_spacing(space = 0.3, part = "all") 
+```
+
+```{r}
+lm('mpg ~ wt + cyl * wt', 
+   data = mutate(.data = mtcars, 
+     cyl = fct(as.character(cyl)))) |> 
+  car::residualPlots(
+    plot = TRUE, tests = FALSE, layout = c(1, 3)) 
+```
+
+## Multiple regression example
+
+```{r}
+wooldridge::discrim |> 
+  lm(
+    formula = 'psoda ~ prpblck + income',
+    # The placeholder for a native pipe is _
+    # Only woorks with named argument and once per call 
+    data = _
+  ) |> 
+  summary()
+```
+
+```{r}
+#| eval: false
+# does not work
+wooldridge::discrim |> 
+  lm(
+    'psoda ~ prpblck + income',
+    _
+  ) |> 
+  summary()
+```
+
+```{r}
+# works
+wooldridge::discrim %>%
+  lm(
+    'psoda ~ prpblck + income',
+    .
+  ) |> 
+  summary()
+```
+
+### Inference
+
+Do fast-food restaurants charge higher prices in districts with a larger concentration of blacks?
+
+```{r}
+wooldridge::discrim %>%
+  lm(
+    'psoda ~ prpblck + income',
+    .
+  ) |> 
+  as_flextable() |> 
+  line_spacing(space = 0.4, part = "body") |> 
+  line_spacing(space = 0.2, part = "footer") |> 
+  colformat_double(j = 2, digits = 9)
+```
+
+```{r}
+wooldridge::discrim %>%
+  lm(
+    'psoda ~ prpblck + log(income)',
+    .
+  ) |> 
+  as_flextable() |> 
+  line_spacing(space = 0.4, part = "body") |> 
+  line_spacing(space = 0.2, part = "footer") |> 
+  bg(i = 2:3, j = 2, bg = "yellow")
+```
+Interpretation:
+
+- One percent increase in proportion of blacks increases the soda price by 0.126/100 = 0.00126 prosent
+- One percent increase in income increases the price of soda by 0.079/100  = 0.00079 percent
+- Both are significant. Hence it looks like the price of a soda is higher in areas with a high proportion of blacks and in areas with higher mean income.
+
+
+```{r}
+qt(0.95, 100)
+```
+
+```{r}
+# df = 1000, tilnærmet normalfordelt
+qt(0.975, 1000)
+```
+
+```{r}
+qt(0.975, 20)
+```
+
+```{r}
+qt(0.975, 10)
+```
+
