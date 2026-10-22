@@ -16,3 +16,196 @@ library(tidyverse)
 
 ```
 
+## Quadratic (Polynominal)
+
+```{r}
+# Set seed
+{set.seed(1234)
+# Sample size
+n <- 1e3
+# Generate data
+quad_df <- tibble(
+  x = runif(n, 0, 10),
+  y = 12 + 16*x - 2.5*x^2 + rnorm(n, sd = 25)
+)
+# regression
+quad_reg <- lm(y ~ x + I(x^2), data = quad_df) 
+coef_q_reg <- coef(quad_reg)
+b1 <- coef_q_reg[2]
+b2 <- coef_q_reg[3]
+}
+```
+
+
+```{r}
+p_quad <- quad_df |> 
+  ggplot(
+    mapping = aes(
+      x = x, 
+      y = y)
+    ) +
+  geom_point(
+    size = 1.5, 
+    colour = "orange", 
+    alpha = 0.5
+    ) +
+  geom_smooth(
+    linewidth = 1.5,
+    colour = "blue",
+    se = FALSE
+  ) +
+  xlab("X") +
+  ylab("Y")
+
+suppressMessages(print(p_quad))
+```
+
+### Regression Model
+
+```{r}
+'y ~ x + I(x^2)' |> 
+  as.formula() |> 
+  lm(
+    data = quad_df
+  ) |> 
+  flextable::as_flextable() |> 
+  flextable::line_spacing(space = 0.5, part = "body") |> 
+  flextable::line_spacing(space = 0.3, part = "footer")
+```
+
+```{r}
+#| message: false
+quad_df %>%  
+  ggplot(
+    mappin = aes(x = x, y = y)
+    ) + 
+  geom_point(
+    colour = "orange", 
+    alpha = 0.2, 
+    size = 1.5) +
+#NOTE: message: false seems to work now
+  stat_smooth(
+    method = 'lm', 
+    formula = y ~ poly(x,2), 
+    se = FALSE, 
+    colour = "red", 
+    linewidth = 0.5
+    ) +
+  geom_smooth(
+    linewidth = 0.5,
+    colour = "blue",
+    se = FALSE
+  ) +
+  xlab("X") + 
+  ylab("Y") 
+```
+
+```{r}
+reg <- lm(y ~ x + I(x^2), data = quad_df)
+# Note the package, apparently many cplot() functions
+margins::cplot(
+  object = reg, 
+  x = "x", 
+  dx = "x", 
+  what = "effect", 
+  draw = TRUE
+  )
+```
+
+```{r}
+#| message: false
+# alternative
+margins::cplot(
+  object = reg, 
+  x = "x", 
+  dx = "x", 
+  what = "effect", 
+  draw = FALSE
+  ) |> 
+  ggplot(
+    mapping = aes(x = xvals)
+    ) + 
+  geom_line(
+    mapping = aes(y = yvals), 
+    colour = "orange", 
+    linewidth = 1
+    ) +
+  geom_line(
+    mapping = aes(y = upper), 
+    linetype = 2, 
+    colour = "orange", 
+    linewidth = 1
+    ) +
+  geom_line(
+    mapping = aes(y = lower), 
+    linetype = 2, 
+    colour = "orange", 
+    linewidth = 1
+    ) +
+  geom_hline(
+    yintercept = 0, 
+    linetype = 1, 
+    colour = "gray"
+    ) +
+  xlab("X") + 
+  ylab("Marginal Effect")
+```
+
+```{r}
+coef(reg)
+```
+
+```{r}
+# peak
+- coef(reg)[2]/(2 * coef(reg)[3])
+```
+
+## Predicting log models
+
+```{r}
+house_sp <- spData::house |> 
+  as.data.frame() |> 
+  select(price, yrbuilt, stories, TLA, beds, baths, lotsize, syear) |> 
+  filter(syear == 1997)
+```
+
+```{r}
+m_lev_lev <- paste0(
+  'price ~ yrbuilt + TLA + ',
+  'beds + baths + lotsize'
+)
+m_log_lev <- paste0(
+  'log(price) ~ yrbuilt + TLA + ',
+  'beds + baths + lotsize'
+)
+```
+
+```{r}
+house_sp |> 
+  ggplot(
+    mapping = aes(x = price)
+  ) +
+  geom_histogram(binwidth = 10000)
+```
+
+```{r}
+house_sp |> 
+  ggplot(
+    mapping = aes(x = log(price))
+  ) +
+  geom_histogram(binwidth = 0.1)
+```
+
+```{r}
+reg_lev_lev <- house_sp %>%
+  lm(
+    formula = m_lev_lev,
+    data = .
+  )
+
+reg_lev_lev |> 
+  flextable::as_flextable() |> 
+  flextable::line_spacing(space = 0.3, part = "all")
+```
+
+
