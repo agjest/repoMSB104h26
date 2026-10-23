@@ -1,0 +1,159 @@
+---
+title: "Category variables; Chp. 7"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup
+library(tidyverse)
+library(wooldridge)
+library(margins)
+library(flextable)
+```
+
+## Category variables
+
+### Marginal effects in interaction model
+
+```{r}
+wage2 <- get(data(wage2))
+```
+
+```{r}
+reg <- lm(wage ~ educ + educ*black, data = wage2)
+```
+
+The function `margins::margins()` gives SE for both cases of `educ`effect, i.e. the effect education has on wage for black people and the effect it has for white people. We see that education has a significant positive effect on wage for white people while the effect is insignificant for black people.
+
+```{r}
+margins(
+  reg, 
+  at = list(black = 0:1)
+  ) |> 
+  summary()  |>  
+  filter(factor == "educ") |> 
+  as_flextable(
+    show_coltype = FALSE
+  ) |> 
+  colformat_double(digits = 3) |> 
+  line_spacing(space = 0.3, part = "all") |> 
+  delete_part(part = "footer")
+```
+
+```{r}
+# The data needed
+margs <- summary(
+  margins(reg, 
+          at = list(black = 0:1, 
+                    south = 0:1)
+          )
+  ) %>% 
+  filter(factor == "educ") %>% 
+  mutate(
+    Term = fct(
+      case_when(
+        black == 1 ~ "Black Workers",
+        black == 0 ~ "Non-black Workers"
+        )
+      ),
+    Race = fct(
+      case_when(
+        black == 1 ~ "Black", 
+        black == 0 ~ "Non-black"
+        )
+      )
+  )
+```
+
+```{r}
+#| paged.print: false
+margs
+```
+
+```{r}
+margs %>% 
+  ggplot() + 
+  geom_hline(
+    yintercept = 0, 
+    linetype = "dashed") +
+  geom_pointrange(
+    mapping = aes(
+      x = Term, 
+      y = AME, 
+      ymin = lower, 
+      ymax = upper, 
+      colour = Race), 
+    size = 1) +
+  coord_flip() + 
+  xlab("") + 
+  ylab("Marginal Effect of Education on Wages") +
+  scale_color_manual(
+    NULL, 
+    values = c("red", "darkslategrey"), 
+    labels = c("Non-black", "Black")
+    ) +
+  theme(
+    legend.position = "bottom"
+  )
+```
+## Schoolspending
+
+```{r}
+# MI school funding and test scores data
+# exppp: expenditures per pupil: expend/enroll
+meap01 <- wooldridge::meap01
+meap01 <- meap01  %>% 
+  mutate(
+    spend = exppp/1000
+    )
+```
+
+```{r}
+# read ~ spend
+lm_r_s <- lm(
+  formula = 'read4 ~ spend', 
+  data = meap01
+  )
+
+lm_r_s_l <- lm(
+  formula = 'read4 ~ spend + lunch', 
+  data = meap01
+  )
+
+lm_r_s_l_sl <- lm(
+  formula = 'read4 ~ spend + spend * lunch', 
+  data = meap01
+  )
+```
+
+```{r}
+# 'read4 ~ spend'
+lm_r_s |> 
+  as_flextable() |> 
+  line_spacing(
+    space = 0.3, part = "all"
+    ) |> 
+  fontsize(size = 9, part = "all")
+```
+
+```{r}
+# 'read4 ~ spend + lunch'
+lm_r_s_l |> 
+  as_flextable() |> 
+  line_spacing(
+    space = 0.3, part = "all"
+    ) |> 
+  fontsize(size = 9, part = "all")
+```
+
+```{r}
+# 'read4 ~ spend + spend * lunch'
+lm_r_s_l_sl |> 
+  as_flextable() |> 
+  line_spacing(
+    space = 0.3, part = "all"
+    ) |> 
+  fontsize(size = 9, part = "all")
+```
+
