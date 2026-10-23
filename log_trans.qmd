@@ -202,10 +202,92 @@ reg_lev_lev <- house_sp %>%
     formula = m_lev_lev,
     data = .
   )
+```
 
+```{r}
 reg_lev_lev |> 
   flextable::as_flextable() |> 
   flextable::line_spacing(space = 0.3, part = "all")
+```
+
+```{r}
+m_log_lev <- paste0(
+  'log(price) ~ yrbuilt + TLA + ',
+  'beds + baths + lotsize'
+)
+```
+
+
+```{r}
+reg_log_lev <- house_sp %>% 
+  lm(
+    formula = m_log_lev,
+    data = .
+  )
+```
+
+
+```{r}
+reg_log_lev |> 
+  flextable::as_flextable() |> 
+  flextable::line_spacing(space = 0.3, part = "all")
+```
+
+```{r}
+summary(reg_log_lev)
+```
+
+```{r}
+summary(reg_log_lev) |> 
+  class()
+```
+
+```{r}
+summary(reg_log_lev) |> 
+  typeof()
+```
+
+```{r}
+summary(reg_log_lev) |> 
+  names()
+```
+
+
+```{r}
+summary(reg_log_lev)$sigma
+```
+
+```{r}
+# tidyverse
+reg_log_lev |> 
+  summary() |> 
+  pluck("sigma")
+```
+
+Residuals normal > Simple procedure to get Y from log(Y)
+
+```{r}
+logy_hat <- fitted(reg_log_lev)
+# Residual standard error:
+s_hat <- summary(reg_log_lev)$sigma
+# Y from log(Y)
+y_hat_s <- exp(s_hat^2 / 2) * exp(logy_hat)
+```
+
+```{r}
+summary(y_hat_s)
+```
+
+```{r}
+residuals(reg_log_lev) |> 
+  tibble(
+    res = _
+  ) |> 
+  ggplot() + 
+  geom_histogram(
+    mapping = aes(x = res), 
+    bins = 50
+  )
 ```
 
 
