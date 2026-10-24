@@ -157,3 +157,59 @@ lm_r_s_l_sl |>
   fontsize(size = 9, part = "all")
 ```
 
+
+```{r}
+wage1 <- get(data(wage1))
+```
+
+
+```{r}
+lm(
+  formula = 'log(wage) ~ female + educ + exper + I(exper^2) + tenure + I(tenure^2)',
+  data = wage1
+) |> 
+  as_flextable() |> 
+  colformat_double(digits = 5) |> 
+  line_spacing(space = 0.3, part = "all") |> 
+  bg(i = 2, j = 3, bg = "yellow")
+```
+
+### “Trained” synthetic data
+
+```{r}
+# Set seed
+{
+set.seed(1234)
+# Sample size
+n <- 1000
+# Generate data
+df2 <- tibble(
+  trained = rep(
+    # 500 trained, 500 untrained
+    c(1, 0), 
+    each = n/2
+    ),
+  productivity = exp(10 + 0.5 * trained + 
+                       rnorm(n, mean = 0, sd = 1)
+                     )
+)
+reg2 <- lm(
+  formula = 'log(productivity) ~ trained', 
+  data = df2)
+b2 <- reg2$coefficients[2]
+}
+```
+
+```{r}
+training <- lm(
+  formula = 'log(productivity) ~ trained',
+  data = df2)  
+```
+
+```{r}
+training |> 
+  as_flextable() |> 
+  line_spacing(space = 0.3, part = "body") |> 
+  line_spacing(space = 0.3, part = "footer")
+```
+
